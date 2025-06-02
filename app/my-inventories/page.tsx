@@ -3,27 +3,60 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Edit, Trash2, Eye, Plus, Clock } from "lucide-react"
 import Navbar from "@/components/navbar"
+import PropertyTable from "@/components/property-table"
 
 interface Listing {
-  id: string
-  type: "rental" | "resale"
-  title: string
-  location: string
-  price: string
-  status: string
-  createdAt: string
-  flatNo?: string
-  flrNo?: string
-  approved?: boolean
+  id: string;
+  type: "rental" | "resale";
+  title: string;
+  location: string;
+  price: string;
+  status: string;
+  createdAt: string;
+  flatNo?: string;
+  flrNo?: string;
+  approved: boolean;
+}
+
+interface RentalProperty {
+  id?: string;
+  station: string;
+  developerName: string;
+  projectName: string;
+  storey: number;
+  flatType: string;
+  saleableArea: number;
+  reraCarpet: number;
+  pfsRate: number;
+  avRate: number;
+  flatValue: number;
+  agreementValue: number;
+  floor: number;
+  totalAv: number;
+  stampDuty: number;
+  registration: number;
+  gst: number;
+  totalPackage: number;
+  type: string;
+  mahaReraNumber: string;
+  possession: string;
+  subLocation: string;
+  landParcel: string;
+  towers: string;
+  cashAmount: number;
+  floorRise: string;
+  floorRisePerFlr: number;
+  fixedComponent: string;
+  possessionCharges: number;
+  parkingCharge: number;
+  finalPackage: number;
+  isCosmo: boolean;
+  amenities: string;
+  highlights: string;
+  paymentScheme: string;
+  availability: string;
+  timestamp?: string;
 }
 
 export default function MyInventoriesPage() {
@@ -278,42 +311,43 @@ export default function MyInventoriesPage() {
             className={`hover:shadow-lg transition-shadow ${!listing.approved ? "opacity-60" : ""}`}
           >
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{listing.title}</h3>
-                    {!listing.approved && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-600">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Pending Approval
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-gray-600">{listing.location}</p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Badge variant="outline">{listing.type}</Badge>
-                    <Badge variant={listing.status === "Active" ? "default" : "secondary"}>{listing.status}</Badge>
-                    {listing.flatNo && <Badge variant="outline">Flat: {listing.flatNo}</Badge>}
-                    {listing.flrNo && <Badge variant="outline">Floor: {listing.flrNo}</Badge>}
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="font-semibold">Title</p>
+                  <p>{listing.title}</p>
                 </div>
-
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-orange-600">{listing.price}</p>
-                    <p className="text-sm text-gray-500">Listed on {listing.createdAt}</p>
+                <div>
+                  <p className="font-semibold">Location</p>
+                  <p>{listing.location}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Price</p>
+                  <p>{listing.price}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Status</p>
+                  <p>{listing.status}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Created At</p>
+                  <p>{listing.createdAt}</p>
+                </div>
+                {listing.flatNo && (
+                  <div>
+                    <p className="font-semibold">Flat No</p>
+                    <p>{listing.flatNo}</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(listing.id, listing.type)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                )}
+                {listing.flrNo && (
+                  <div>
+                    <p className="font-semibold">Floor No</p>
+                    <p>{listing.flrNo}</p>
                   </div>
+                )}
+                <div className="flex justify-end col-span-2">
+                  <Button size="sm" variant="outline">
+                    <Edit className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>

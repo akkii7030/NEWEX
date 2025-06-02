@@ -9,7 +9,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "estatex"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password } = body
+    let { email, password } = body
+
+    email = email.trim().toLowerCase()
 
     // Connect to MongoDB
     const client = new MongoClient(MONGO_URI)

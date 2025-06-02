@@ -10,7 +10,9 @@ const ADMIN_PHONE = "7758085393" // Special admin phone number
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, number, email, password, reraNumber, state, district, location, latitude, longitude } = body
+    let { name, number, email, password, reraNumber, state, district, location, latitude, longitude } = body
+
+    email = email.trim().toLowerCase()
 
     // Connect to MongoDB
     const client = new MongoClient(MONGO_URI)

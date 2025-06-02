@@ -63,6 +63,12 @@ interface Listing {
   description: string
   ownerType: string
   verified: boolean
+  approved: boolean
+  ownerId?: string
+  flatNumber?: string
+  contactName?: string
+  deposit?: string
+  directOrBroker?: string
 }
 
 interface SavedSearch {
@@ -131,6 +137,11 @@ export default function CPDashboard() {
     // Advanced
     keywords: "",
     excludeKeywords: "",
+
+    // New fields
+    prefix: "",
+    name: "",
+    whatsapp: "",
   })
 
   const propertyTypes = ["1RK", "1BHK", "2BHK", "3BHK", "4BHK", "5BHK", "Villa", "Penthouse", "Studio", "Duplex"]
@@ -243,6 +254,14 @@ export default function CPDashboard() {
 
   const applyFilters = () => {
     let filtered = [...listings]
+
+    // Only show approved listings in CP Dashboard
+    filtered = filtered.filter((listing) => listing.approved === true)
+
+    // Filter by type (rental/resale)
+    if (filters.status) {
+      filtered = filtered.filter((listing) => listing.type === filters.status)
+    }
 
     // Text search
     if (filters.searchQuery) {
@@ -403,7 +422,26 @@ export default function CPDashboard() {
     setFilteredListings(filtered)
   }
 
+  const [maxCompare, setMaxCompare] = useState(8);
+
+  useEffect(() => {
+    const updateMaxCompare = () => {
+      setMaxCompare(window.innerWidth < 768 ? 5 : 8);
+    };
+    updateMaxCompare();
+    window.addEventListener("resize", updateMaxCompare);
+    return () => window.removeEventListener("resize", updateMaxCompare);
+  }, []);
+
   const handleSelectListing = (listingId: string) => {
+    if (
+      selectedListings.includes(listingId)
+        ? false
+        : selectedListings.length >= maxCompare
+    ) {
+      alert(`You can compare up to ${maxCompare} listings at a time.`);
+      return;
+    }
     setSelectedListings((prev) =>
       prev.includes(listingId) ? prev.filter((id) => id !== listingId) : [...prev, listingId],
     )
@@ -484,6 +522,9 @@ export default function CPDashboard() {
       verified: false,
       keywords: "",
       excludeKeywords: "",
+      prefix: "",
+      name: "",
+      whatsapp: "",
     })
   }
 
@@ -516,27 +557,60 @@ export default function CPDashboard() {
     return `₹${price}`
   }
 
+  // Add this helper for "Coming Soon" alert
+  const handleComingSoon = () => {
+    alert("Coming Soon");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Property Type Tabs */}
-        <Tabs value={activePropertyType} onValueChange={setActivePropertyType} className="mb-6">
+        <Tabs value={activePropertyType} onValueChange={setActivePropertyType} className="mb-2">
           <TabsList className="grid grid-cols-8 w-full">
-            {["Residential", "Commercial", "Shops", "Bunglow", "Raw House", "Villa", "Pent House", "Plot"].map(
-              (type) => (
-                <TabsTrigger
-                  key={type}
-                  value={type}
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-sm"
+            <TabsTrigger
+              value="Residential"
+              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-sm"
+            >
+              Residential
+            </TabsTrigger>
+            {["Commercial", "Shops", "Bunglow", "Raw House", "Villa", "Pent House", "Plot"].map((type) => (
+              <div key={type} className="relative group">
+                <button
+                  type="button"
+                  className="text-sm text-gray-400 cursor-not-allowed px-2 py-1 w-full"
+                  onClick={handleComingSoon}
+                  tabIndex={-1}
+                  style={{ pointerEvents: "auto" }}
                 >
                   {type}
-                </TabsTrigger>
-              ),
-            )}
+                </button>
+                <div className="absolute left-1/2 -translate-x-1/2 mt-1 z-10 hidden group-hover:block bg-orange-600 text-white text-xs rounded px-2 py-1 shadow">
+                  Coming Soon
+                </div>
+              </div>
+            ))}
           </TabsList>
         </Tabs>
+
+        {/* Status Filter just below Tabs */}
+        <div className="mb-6 flex items-center space-x-4">
+          <Label>Status</Label>
+          <Select
+            value={filters.status}
+            onValueChange={(value) => setFilters({ ...filters, status: value })}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Select Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="resale">Resale</SelectItem>
+              <SelectItem value="rental">Rental</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Enhanced Filters Sidebar */}
@@ -554,403 +628,108 @@ export default function CPDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Search Query */}
-                <div className="space-y-2">
-                  <Label>Search Properties</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search by title, location, society..."
-                      value={filters.searchQuery}
-                      onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
+                {/* Prefix */}
+                <div>
+                  <Label>Prefix</Label>
+                  <Select
+                    value={filters.prefix || ""}
+                    onValueChange={(value) => setFilters({ ...filters, prefix: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Prefix" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mr">Mr</SelectItem>
+                      <SelectItem value="Mrs">Mrs</SelectItem>
+                      <SelectItem value="Ms">Ms</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Saved Searches */}
-                {savedSearches.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Saved Searches</Label>
-                    <div className="space-y-2">
-                      {savedSearches.map((search) => (
-                        <div key={search.id} className="flex items-center justify-between p-2 border rounded">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => loadSavedSearch(search)}
-                            className="flex-1 justify-start"
-                          >
-                            <Bookmark className="h-4 w-4 mr-2" />
-                            {search.name}
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => deleteSavedSearch(search.id)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                {/* Name */}
+                <div>
+                  <Label>Name</Label>
+                  <Input
+                    placeholder="Enter name"
+                    value={filters.name || ""}
+                    onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                  />
+                </div>
+
+                {/* WhatsApp Number */}
+                <div>
+                  <Label>WhatsApp Number</Label>
+                  <Input
+                    placeholder="Enter WhatsApp number"
+                    value={filters.whatsapp || ""}
+                    onChange={(e) => setFilters({ ...filters, whatsapp: e.target.value })}
+                  />
+                </div>
+
+                {/* Type */}
+                <div>
+                  <Label>Type</Label>
+                  <Select
+                    value={filters.status}
+                    onValueChange={(value) => setFilters({ ...filters, status: value, station: "" })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="resale">Resale</SelectItem>
+                      <SelectItem value="rental">Rental</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Station */}
+                <div>
+                  <Label>Station</Label>
+                  <Select
+                    value={filters.station}
+                    onValueChange={(value) => setFilters({ ...filters, station: value })}
+                    disabled={!filters.status}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Status first" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stations.map((station) => (
+                        <SelectItem key={station} value={station}>
+                          {station}
+                        </SelectItem>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Basic Filters */}
-                <div className="space-y-4">
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Status">All Status</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Sold">Sold</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Property Type</Label>
-                    <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Types">All Types</SelectItem>
-                        <SelectItem value="rental">Rental</SelectItem>
-                        <SelectItem value="resale">Resale</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>BHK Type</Label>
-                    <Select
-                      value={filters.propertyType}
-                      onValueChange={(value) => setFilters({ ...filters, propertyType: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select BHK" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Types">All Types</SelectItem>
-                        {propertyTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Price Range */}
-                <div className="space-y-3">
-                  <Label>Price Range</Label>
-                  <div className="px-2">
-                    <Slider
-                      value={filters.priceRange}
-                      onValueChange={(value) => setFilters({ ...filters, priceRange: value })}
-                      max={10000000}
-                      min={0}
-                      step={50000}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{formatPrice(filters.priceRange[0])}</span>
-                    <span>{formatPrice(filters.priceRange[1])}</span>
-                  </div>
+                {/* Min Budget */}
+                <div>
+                  <Label>Min Budget</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter min budget"
+                    value={filters.minPrice}
+                    onChange={(e) => setFilters({ ...filters, minPrice: Number(e.target.value) })}
+                  />
                 </div>
 
-                {/* Area Range */}
-                <div className="space-y-3">
-                  <Label>Area (sq ft)</Label>
-                  <div className="px-2">
-                    <Slider
-                      value={filters.areaRange}
-                      onValueChange={(value) => setFilters({ ...filters, areaRange: value })}
-                      max={5000}
-                      min={0}
-                      step={50}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{filters.areaRange[0]} sq ft</span>
-                    <span>{filters.areaRange[1]} sq ft</span>
-                  </div>
+                {/* Max Budget */}
+                <div>
+                  <Label>Max Budget</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter max budget"
+                    value={filters.maxPrice}
+                    onChange={(e) => setFilters({ ...filters, maxPrice: Number(e.target.value) })}
+                  />
                 </div>
 
-                {/* Advanced Filters Toggle */}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className="w-full"
-                >
-                  {showAdvancedFilters ? "Hide" : "Show"} Advanced Filters
+                {/* Apply Filters Button */}
+                <Button className="w-full" onClick={applyFilters}>
+                  Apply Filters
                 </Button>
-
-                {showAdvancedFilters && (
-                  <div className="space-y-4 border-t pt-4">
-                    {/* Bedrooms & Bathrooms */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label>Bedrooms</Label>
-                        <Select
-                          value={filters.bedrooms}
-                          onValueChange={(value) => setFilters({ ...filters, bedrooms: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Any">Any</SelectItem>
-                            {[1, 2, 3, 4, 5].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
-                                {num}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Bathrooms</Label>
-                        <Select
-                          value={filters.bathrooms}
-                          onValueChange={(value) => setFilters({ ...filters, bathrooms: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Any">Any</SelectItem>
-                            {[1, 2, 3, 4, 5].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
-                                {num}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Furnishing */}
-                    <div>
-                      <Label>Furnishing</Label>
-                      <Select
-                        value={filters.furnishing}
-                        onValueChange={(value) => setFilters({ ...filters, furnishing: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Any">Any</SelectItem>
-                          {furnishingOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Floor Range */}
-                    <div className="space-y-3">
-                      <Label>Floor Range</Label>
-                      <div className="px-2">
-                        <Slider
-                          value={filters.floorRange}
-                          onValueChange={(value) => setFilters({ ...filters, floorRange: value })}
-                          max={50}
-                          min={0}
-                          step={1}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Floor {filters.floorRange[0]}</span>
-                        <span>Floor {filters.floorRange[1]}</span>
-                      </div>
-                    </div>
-
-                    {/* Parking */}
-                    <div>
-                      <Label>Parking</Label>
-                      <Select
-                        value={filters.parking}
-                        onValueChange={(value) => setFilters({ ...filters, parking: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Any">Any</SelectItem>
-                          <SelectItem value="Available">Available</SelectItem>
-                          <SelectItem value="Not Available">Not Available</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Facing */}
-                    <div>
-                      <Label>Facing</Label>
-                      <Select
-                        value={filters.facing}
-                        onValueChange={(value) => setFilters({ ...filters, facing: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Any">Any</SelectItem>
-                          {facingOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Property Age */}
-                    <div>
-                      <Label>Max Property Age (years)</Label>
-                      <Select
-                        value={filters.propertyAge}
-                        onValueChange={(value) => setFilters({ ...filters, propertyAge: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Any">Any</SelectItem>
-                          <SelectItem value="1">Under 1 year</SelectItem>
-                          <SelectItem value="3">Under 3 years</SelectItem>
-                          <SelectItem value="5">Under 5 years</SelectItem>
-                          <SelectItem value="10">Under 10 years</SelectItem>
-                          <SelectItem value="20">Under 20 years</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Owner Type */}
-                    <div>
-                      <Label>Owner Type</Label>
-                      <Select
-                        value={filters.ownerType}
-                        onValueChange={(value) => setFilters({ ...filters, ownerType: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Any">Any</SelectItem>
-                          {ownerTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Nearby Stations */}
-                    <div>
-                      <Label>Nearby Stations</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {stations.map((station) => (
-                          <div key={station} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={filters.nearbyStations.includes(station)}
-                              onCheckedChange={() => toggleNearbyStation(station)}
-                            />
-                            <span className="text-sm">{station}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Amenities */}
-                    <div>
-                      <Label>Amenities</Label>
-                      <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-y-auto">
-                        {amenitiesList.map((amenity) => (
-                          <div key={amenity} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={filters.amenities.includes(amenity)}
-                              onCheckedChange={() => toggleAmenity(amenity)}
-                            />
-                            <span className="text-sm">{amenity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Keywords */}
-                    <div>
-                      <Label>Include Keywords</Label>
-                      <Input
-                        placeholder="e.g., sea view, corner flat"
-                        value={filters.keywords}
-                        onChange={(e) => setFilters({ ...filters, keywords: e.target.value })}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Separate multiple keywords with commas</p>
-                    </div>
-
-                    {/* Exclude Keywords */}
-                    <div>
-                      <Label>Exclude Keywords</Label>
-                      <Input
-                        placeholder="e.g., ground floor, old building"
-                        value={filters.excludeKeywords}
-                        onChange={(e) => setFilters({ ...filters, excludeKeywords: e.target.value })}
-                      />
-                    </div>
-
-                    {/* Verified Properties */}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={filters.verified}
-                        onCheckedChange={(checked) => setFilters({ ...filters, verified: checked as boolean })}
-                      />
-                      <Label>Verified Properties Only</Label>
-                    </div>
-                  </div>
-                )}
-
-                {/* Save Search */}
-                <Dialog open={showSaveSearch} onOpenChange={setShowSaveSearch}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Search
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Save Current Search</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Search Name</Label>
-                        <Input
-                          placeholder="e.g., 2BHK in Bandra under 50K"
-                          value={searchName}
-                          onChange={(e) => setSearchName(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={() => setShowSaveSearch(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={saveCurrentSearch}>Save Search</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </CardContent>
             </Card>
           </div>
@@ -1047,105 +826,66 @@ export default function CPDashboard() {
                 </Button>
               </div>
             ) : (
-              <div className={viewMode === "grid" ? "grid md:grid-cols-2 gap-4" : "space-y-4"}>
-                {filteredListings.map((listing) => (
-                  <Card key={listing.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <Checkbox
-                            checked={selectedListings.includes(listing.id)}
-                            onCheckedChange={() => handleSelectListing(listing.id)}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="text-lg font-semibold text-gray-900">{listing.title}</h3>
-                              <Badge variant={listing.type === "rental" ? "default" : "secondary"}>
-                                {listing.type}
-                              </Badge>
-                              <Badge variant={listing.status === "Active" ? "default" : "outline"}>
-                                {listing.status}
-                              </Badge>
-                              {listing.verified && (
-                                <Badge className="bg-green-600 text-white">
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  Verified
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-1 text-gray-600 mb-2">
-                              <MapPin className="h-4 w-4" />
-                              <span>{listing.location}</span>
-                            </div>
-                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                              <div className="flex items-center space-x-1">
-                                <Home className="h-4 w-4" />
-                                <span>{listing.propertyType}</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Building className="h-4 w-4" />
-                                <span>{listing.area} sq ft</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <span>
-                                  Floor {listing.floor}/{listing.totalFloors}
-                                </span>
-                              </div>
-                              {listing.parking && (
-                                <div className="flex items-center space-x-1">
-                                  <Car className="h-4 w-4" />
-                                  <span>Parking</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-4 text-sm text-gray-600">
-                              <div className="flex items-center space-x-1">
-                                <Phone className="h-4 w-4" />
-                                <span>{listing.contact}</span>
-                              </div>
-                              <span>{listing.ownerType}</span>
-                              <span>{listing.furnishing}</span>
-                            </div>
-                            {listing.amenities.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {listing.amenities.slice(0, 3).map((amenity) => (
-                                  <Badge key={amenity} variant="outline" className="text-xs">
-                                    {amenity}
-                                  </Badge>
-                                ))}
-                                {listing.amenities.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{listing.amenities.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="text-xl font-bold text-orange-600">{listing.price}</p>
-                            <p className="text-sm text-gray-500">Listed on {listing.createdAt}</p>
-                            <p className="text-xs text-gray-400">{listing.availability}</p>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleWhatsApp(listing.contact, listing.title)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border">
+                  <thead>
+                    <tr>
+                      <th>Sr. No.</th>
+                      <th>Select</th>
+                      <th>Direct / Broker</th>
+                      <th>Building / Society name</th>
+                      <th>Road / Location</th>
+                      {filters.status === "resale" && (
+                        <>
+                          <th>Expected Price</th>
+                          <th>FLR NO</th>
+                        </>
+                      )}
+                      {filters.status === "rental" && (
+                        <>
+                          <th>Rent</th>
+                          <th>Deposit</th>
+                        </>
+                      )}
+                      <th>Flat No.</th>
+                      <th>Name - No.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredListings.map((listing, idx) => {
+                      const isAdmin = user?.role === "admin";
+                      const isOwnListing = user?.id === listing.ownerId;
+                      return (
+                        <tr key={listing.id}>
+                          <td>{idx + 1}</td>
+                          <td>
+                            <Checkbox
+                              checked={selectedListings.includes(listing.id)}
+                              onCheckedChange={() => handleSelectListing(listing.id)}
+                            />
+                          </td>
+                          <td>{listing.directOrBroker}</td>
+                          <td>{listing.buildingSociety}</td>
+                          <td>{listing.location}</td>
+                          {filters.status === "resale" && (
+                            <>
+                              <td>{listing.price}</td>
+                              <td>{listing.floor}</td>
+                            </>
+                          )}
+                          {filters.status === "rental" && (
+                            <>
+                              <td>{listing.price}</td>
+                              <td>{listing.deposit}</td>
+                            </>
+                          )}
+                          <td>{(isAdmin || isOwnListing) ? listing.flatNumber : "****"}</td>
+                          <td>{listing.contactName} - {listing.contact}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
 

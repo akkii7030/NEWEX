@@ -69,22 +69,6 @@ export default function Navbar() {
               </Button>
             </Link>
 
-            {/* Alerts Link with Badge */}
-            <Link href="/alerts">
-              <Button
-                variant="ghost"
-                className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 font-medium relative"
-              >
-                <Bell className="h-4 w-4 mr-2" />
-                Alerts
-                {alertCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                    {alertCount}
-                  </Badge>
-                )}
-              </Button>
-            </Link>
-
             {/* Admin Panel Link - Only visible to admins */}
             {user?.role === "admin" && (
               <Link href="/admin">

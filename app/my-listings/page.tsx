@@ -37,56 +37,15 @@ export default function MyListingsPage() {
       setUser(JSON.parse(userData))
     }
 
-    // Mock listings data
-    const mockListings: Listing[] = [
-      {
-        id: "1",
-        type: "rental",
-        title: "Spacious 2BHK in Bandra",
-        location: "Bandra West, Mumbai",
-        price: "₹45,000/month",
-        status: "Active",
-        createdAt: "2024-01-15",
-        views: 156,
-        inquiries: 12,
-      },
-      {
-        id: "2",
-        type: "resale",
-        title: "Luxury 3BHK Apartment",
-        location: "Powai, Mumbai",
-        price: "₹1.2 Cr",
-        status: "Pending",
-        createdAt: "2024-01-10",
-        views: 89,
-        inquiries: 7,
-      },
-      {
-        id: "3",
-        type: "rental",
-        title: "Modern 1BHK Studio",
-        location: "Andheri East, Mumbai",
-        price: "₹28,000/month",
-        status: "Rented",
-        createdAt: "2024-01-05",
-        views: 234,
-        inquiries: 18,
-      },
-      {
-        id: "4",
-        type: "resale",
-        title: "Premium Villa",
-        location: "Juhu, Mumbai",
-        price: "₹3.5 Cr",
-        status: "Active",
-        createdAt: "2024-01-01",
-        views: 67,
-        inquiries: 4,
-      },
-    ]
+    // Fetch approved listings data from the server
+    const fetchListings = async () => {
+      const response = await fetch("/api/listings/cp")
+      const data = await response.json()
+      setListings(data)
+      setFilteredListings(data)
+    }
 
-    setListings(mockListings)
-    setFilteredListings(mockListings)
+    fetchListings()
   }, [])
 
   useEffect(() => {

@@ -19,6 +19,10 @@ interface PendingListing {
   contact: string
   createdAt: string
   status: string
+  srNo?: string
+  directOrBroker?: string
+  buildingSociety?: string
+  roadLocation?: string
 }
 
 interface User {
@@ -30,6 +34,7 @@ interface User {
   isSubscribed: boolean
   subscribedLocations: string[]
   createdAt: string
+  role?: string // Added role property, optional for backward compatibility
 }
 
 export default function AdminPage() {
@@ -40,6 +45,8 @@ export default function AdminPage() {
   const [selectedListing, setSelectedListing] = useState<PendingListing | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [adminLocation, setAdminLocation] = useState<string>("")
+  const [promotingUserId, setPromotingUserId] = useState<string | null>(null)
+  const [activeListingsCount, setActiveListingsCount] = useState<number>(0)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -98,6 +105,10 @@ export default function AdminPage() {
           contact: "+91 9876543210",
           createdAt: "2024-01-15",
           status: "Pending",
+          srNo: "1",
+          directOrBroker: "Direct",
+          buildingSociety: "Sunshine Apartments",
+          roadLocation: "Main Road",
         },
         {
           id: "2",
@@ -109,10 +120,31 @@ export default function AdminPage() {
           contact: "+91 9876543211",
           createdAt: "2024-01-14",
           status: "Pending",
+          srNo: "2",
+          directOrBroker: "Broker",
+          buildingSociety: "Greenwood Society",
+          roadLocation: "2nd Street",
         },
       ])
     }
   }
+
+  const fetchActiveListingsCount = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/admin/active-listings-count", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setActiveListingsCount(data.activeListingsCount || 0)
+      }
+    } catch (error) {
+      console.error("Error fetching active listings count:", error)
+    }
+  }
+
+  // Remove duplicate handleApproveListing function
 
   const fetchUsers = async () => {
     try {
@@ -207,6 +239,68 @@ export default function AdminPage() {
     }
   }
 
+  const handlePromoteUserToAdmin = async (userId: string) => {
+    setPromotingUserId(userId)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/admin/make-admin/${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: "admin" }),
+      })
+      if (res.ok) {
+        alert("User promoted to admin!")
+        fetchUsers()
+      } else {
+        const data = await res.json()
+        alert(data.error || "Failed to promote user.")
+      }
+    } catch (err) {
+      alert("Error promoting user.")
+    }
+    setPromotingUserId(null)
+  }
+
+  const handleRemoveListing = async (listingId: string) => {
+    const confirmed = confirm("Are you sure you want to remove this listing?")
+    if (!confirmed) return
+
+    try {
+      const token = localStorage.getItem("token")
+      await fetch(`/api/admin/remove-listing/${listingId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      alert("Listing removed successfully!")
+      fetchPendingListings()
+    } catch (error) {
+      console.error("Error removing listing:", error)
+      alert("Failed to remove listing")
+    }
+  }
+
+  const fetchAllListings = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/admin/listings", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Process data if needed
+      }
+    } catch (error) {
+      console.error("Error fetching all listings:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchAllListings()
+  }, [])
+
   if (!user || user.role !== "admin") {
     return <div>Access Denied</div>
   }
@@ -264,7 +358,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Listings</p>
-                  <p className="text-2xl font-bold text-purple-600">24</p>
+                  <p className="text-2xl font-bold text-purple-600">{activeListingsCount}</p>
                 </div>
                 <Building className="h-8 w-8 text-purple-600" />
               </div>
@@ -286,65 +380,69 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
+
           {/* Pending Approvals Tab */}
           <TabsContent value="pending">
             <div className="space-y-4">
-              {pendingListings.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No pending approvals</p>
-                </div>
-              ) : (
-                pendingListings.map((listing) => (
-                  <Card key={listing.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">{listing.title}</h3>
-                            <Badge variant={listing.type === "rental" ? "default" : "secondary"}>{listing.type}</Badge>
-                            <Badge variant="outline" className="text-orange-600 border-orange-600">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Pending
-                            </Badge>
-                          </div>
-                          <p className="text-gray-600 mb-2">{listing.location}</p>
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
-                            <span>Owner: {listing.ownerName}</span>
-                            <span>Contact: {listing.contact}</span>
-                            <span>Submitted: {listing.createdAt}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="text-xl font-bold text-orange-600">{listing.price}</p>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedListing(listing); setShowDetailModal(true); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveListing(listing.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleRejectListing(listing.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+          {pendingListings.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No pending approvals</p>
             </div>
+          ) : (
+            pendingListings.map((listing) => (
+              <Card key={listing.id}>
+                <CardContent>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div><b>Sr. No.:</b> {listing.srNo}</div>
+                      <div><b>Direct / Broker:</b> {listing.directOrBroker}</div>
+                      <div><b>Building / Society name:</b> {listing.buildingSociety}</div>
+                      <div><b>Road / Location:</b> {listing.roadLocation}</div>
+                      {/* ...all other fields... */}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button onClick={() => { setSelectedListing(listing); setShowDetailModal(true); }}>
+                        <Eye />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleApproveListing(listing.id)}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => handleRejectListing(listing.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+            </div>
+
+            {/* Modal for full details */}
+            {showDetailModal && selectedListing && (
+              <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+                  <h2 className="text-2xl font-bold mb-4">{selectedListing.title}</h2>
+                  {Object.entries(selectedListing).map(([key, value]) => (
+                    <p key={key}><b>{key}:</b> {String(value)}</p>
+                  ))}
+                  <Button className="mt-4 bg-orange-600 hover:bg-orange-700" onClick={() => handleApproveListing(selectedListing.id)}>
+                    Approve
+                  </Button>
+                  <Button className="mt-4 ml-4 bg-red-600 hover:bg-red-700" onClick={() => setShowDetailModal(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           {/* Users Tab */}
@@ -386,6 +484,16 @@ export default function AdminPage() {
                         <Button size="sm" variant="outline">
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {user.role !== "admin" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={promotingUserId === user.id}
+                            onClick={() => handlePromoteUserToAdmin(user.id)}
+                          >
+                            {promotingUserId === user.id ? "Promoting..." : "Make Admin"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

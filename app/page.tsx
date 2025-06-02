@@ -35,7 +35,7 @@ export default function HomePage() {
         if (data.user.role === "admin") {
           router.push("/cp-dashboard")
         } else {
-          router.push("/my-inventories")
+          router.push("/offer")
         }
       } else {
         alert("Login failed")
@@ -64,10 +64,15 @@ export default function HomePage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+            <button
+              className="flex items-center space-x-2 focus:outline-none"
+              onClick={() => router.push("/offer")}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+              aria-label="Go to Offers"
+            >
               <Building2 className="h-8 w-8 text-orange-600" />
               <span className="text-2xl font-bold text-gray-900">RealEstate Pro</span>
-            </div>
+            </button>
           </div>
         </div>
       </header>
